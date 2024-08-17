@@ -93,6 +93,7 @@ def job_audio(urls, series, series_path, downloaded_urls):
                 }],
                 'postprocessor_args': [
                     '-ar', '16000',
+                    '-ac', '1',  
                     '-strict', '-2',
                     '-async', '1', '-r', '25'
                 ],
