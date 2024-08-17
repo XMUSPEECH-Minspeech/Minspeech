@@ -40,7 +40,7 @@ def split_wav(df, source_wav_path):
     sampling_rate = wav_params[2]
     assert sampling_rate == 16000  # Ensure the sample rate is 16000 Hz
     wav_bytes = wavread.readframes(wav_params[3])
-    assert wav_params[1] == 2  # Ensure audio is 2 channels
+    assert wav_params[1] == 1  # Ensure audio is 1 channels
     wave_data = np.frombuffer(wav_bytes, dtype=np.int16)
     wave_data = np.reshape(wave_data, [wav_params[3], wav_params[0]])[:, 0]  # Use only one channel
 
