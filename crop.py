@@ -14,6 +14,7 @@ import statistics
 # Some short audio files (less than 0.2s) might still be created; they will need to be manually deleted later.
 
 # Parameters that need to be modified
+
 SourceDir = "./SourceData/label/"
 OutputDir = "./OutputData/label/"
 
@@ -37,10 +38,11 @@ def split_wav(df, source_wav_path):
     # Read the audio file
     wavread = wave.open(source_wav_path, 'rb')
     wav_params = wavread.getparams()
+    print(f"wav_params: {wav_params}")
     sampling_rate = wav_params[2]
     assert sampling_rate == 16000  # Ensure the sample rate is 16000 Hz
     wav_bytes = wavread.readframes(wav_params[3])
-    assert wav_params[1] == 1  # Ensure audio is 1 channels
+    assert wav_params[0] == 1  # Ensure audio is 1 channels
     wave_data = np.frombuffer(wav_bytes, dtype=np.int16)
     wave_data = np.reshape(wave_data, [wav_params[3], wav_params[0]])[:, 0]  # Use only one channel
 
@@ -84,13 +86,18 @@ def vtt2list(full_path):
             del lines[i:i+3]
 
         start_times, end_times, captions, lasts = [], [], [], []
-
+        text_flag = 1
         for i, line in enumerate(lines):
-            if i % 2:  # Odd lines contain captions
+            if i % 2 == text_flag:  # Odd lines contain captions
                 text = zhconv.convert(line, 'zh-hans')  # Convert traditional to simplified Chinese
                 a_z = filter_a_z.sub("", text.strip())  # Remove letters and '%'
                 bracket = filter_bracket.sub("", text.strip())
                 text = re.sub(re_punctuation, "", text)  # Remove punctuation
+                if "-->" in text:
+                    i-=1
+                    text_flag+=1
+                    text_flag %=2
+                    continue
                 if len(text.replace(" ","")) <= 2 or continue_time < 0.2 or continue_time > 7 or bracket or a_z:
                     lasts.pop()
                     start_times.pop()
@@ -134,6 +141,7 @@ def make_file_set():
     """
     episode_list = []
     missing_episodes = []
+
     for episode in os.listdir(source_file):
         assert episode[1:3] == s0s1  # Ensure the episode belongs to the correct series
         episode_list.append(episode[-7:-4])
@@ -154,6 +162,13 @@ def main():
     create_path(output_file + "/audio")
 
     episodes_set = make_file_set()
+    croped_set = [d for d in os.listdir(output_file+"/audio") if os.path.isdir(os.path.join(output_file+"audio", d))]
+    episodes_set = list(set(episodes_set) - set(croped_set))
+    # print(croped_set[-1])
+    # Add the last element in croped_set
+    if episodes_set and croped_set:
+        episodes_set.append(croped_set[-1])
+    episodes_set = sorted(episodes_set)
     print("Available episodes for S{}: {}".format(s0s1, episodes_set))
 
     for episode in episodes_set:
@@ -166,6 +181,5 @@ if __name__ == "__main__":
     for dir_name in os.listdir(SourceDir):
         assert len(dir_name) == 3  # Ensure directory name is in Ss0s1 format
         s0s1 = dir_name[1:]
-        print(dir_name)
         main()
     print("Total duration: ", all_time / 3600)
